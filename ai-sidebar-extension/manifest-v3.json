@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "NeuroSEDA - AI Web Assistant",
+  "version": "1.0.0",
+  "description": "AI-powered sidebar assistant with element selection for any website",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_title": "NeuroSEDA AI Assistant"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "css": ["content-styles.css"]
+    }
+  ]
+}

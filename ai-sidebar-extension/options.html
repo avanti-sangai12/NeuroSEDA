@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroSEDA - Options</title>
+    <link rel="stylesheet" href="options-styles.css">
+</head>
+<body>
+    <div class="options-container">
+        <!-- Header -->
+        <header class="options-header">
+            <div class="header-content">
+                <h1 class="app-title">
+                    <span class="brain-icon">🧠</span>
+                    NeuroSEDA Settings
+                </h1>
+                <p class="app-subtitle">Configure your AI Assistant</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="options-main">
+            <!-- API Key Section -->
+            <div class="settings-section">
+                <h2>🔑 API Configuration</h2>
+                <p class="section-description">
+                    Enter your Gemini API key to enable AI-powered features. Get your key from 
+                    <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer">
+                        Google AI Studio
+                    </a>
+                </p>
+
+                <div class="form-group">
+                    <label for="apiKey" class="form-label">
+                        Gemini API Key
+                        <span class="required">*</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="password" 
+                            id="apiKey" 
+                            class="form-input" 
+                            placeholder="sk-... or your API key"
+                            autocomplete="off"
+                        >
+                        <button id="toggleApiKeyBtn" class="toggle-btn" title="Show/Hide API Key">
+                            👁️
+                        </button>
+                    </div>
+                    <small class="form-help">
+                        Your API key is stored securely in your browser and never shared.
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="apiModel" class="form-label">
+                        AI Model
+                    </label>
+                    <select id="apiModel" class="form-select">
+                        <option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option>
+                        <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                    </select>
+                    <small class="form-help">
+                        Choose which Gemini model to use. Flash is faster, Pro is more capable.
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="maxResponseLength" class="form-label">
+                        Max Response Length
+                    </label>
+                    <input 
+                        type="number" 
+                        id="maxResponseLength" 
+                        class="form-input" 
+                        value="1024"
+                        min="256"
+                        max="4000"
+                    >
+                    <small class="form-help">
+                        Maximum number of tokens in AI responses (256-4000).
+                    </small>
+                </div>
+            </div>
+
+            <!-- Feature Settings -->
+            <div class="settings-section">
+                <h2>⚙️ Features</h2>
+
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enableTextSelection" class="form-checkbox" checked>
+                        <span>Enable Text Selection Analysis</span>
+                    </label>
+                    <small class="form-help">
+                        Allow selecting text on pages to analyze with AI.
+                    </small>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enableImageAnalysis" class="form-checkbox" checked>
+                        <span>Enable Image Analysis</span>
+                    </label>
+                    <small class="form-help">
+                        Right-click images to analyze them with AI.
+                    </small>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enableElementInspector" class="form-checkbox" checked>
+                        <span>Enable Element Inspector</span>
+                    </label>
+                    <small class="form-help">
+                        Click to select and inspect page elements.
+                    </small>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enableNotifications" class="form-checkbox" checked>
+                        <span>Enable Notifications</span>
+                    </label>
+                    <small class="form-help">
+                        Show notifications for important events.
+                    </small>
+                </div>
+            </div>
+
+            <!-- UI Settings -->
+            <div class="settings-section">
+                <h2>🎨 UI Settings</h2>
+
+                <div class="form-group">
+                    <label for="theme" class="form-label">
+                        Theme
+                    </label>
+                    <select id="theme" class="form-select">
+                        <option value="auto">Auto (System)</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enableChatHistory" class="form-checkbox" checked>
+                        <span>Save Chat History</span>
+                    </label>
+                    <small class="form-help">
+                        Store conversation history for reference.
+                    </small>
+                </div>
+            </div>
+
+            <!-- Privacy Section -->
+            <div class="settings-section info-section">
+                <h2>🔒 Privacy & Security</h2>
+                <div class="info-box">
+                    <p>
+                        <strong>Your Data is Safe:</strong>
+                    </p>
+                    <ul>
+                        <li>✅ API key stored locally in your browser</li>
+                        <li>✅ Never transmitted to any server except Gemini API</li>
+                        <li>✅ Chat history stored locally only</li>
+                        <li>✅ No tracking or analytics</li>
+                        <li>✅ No data retention after session</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="settings-section danger-section">
+                <h2>⚠️ Advanced</h2>
+
+                <div class="form-group">
+                    <button id="clearHistoryBtn" class="btn btn-danger">
+                        🗑️ Clear All Data
+                    </button>
+                    <small class="form-help">
+                        Permanently delete all saved settings, chat history, and configuration.
+                    </small>
+                </div>
+            </div>
+
+            <!-- Button Section -->
+            <div class="button-section">
+                <button id="saveBtn" class="btn btn-primary">
+                    💾 Save Settings
+                </button>
+                <button id="resetBtn" class="btn btn-secondary">
+                    ↺ Reset to Defaults
+                </button>
+                <span id="status" class="status-message"></span>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="options-footer">
+            <p>NeuroSEDA v1.0.0 • <a href="https://github.com" target="_blank">GitHub</a></p>
+        </footer>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

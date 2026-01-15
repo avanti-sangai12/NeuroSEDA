@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroSEDA AI Assistant</title>
+    <link rel="stylesheet" href="sidepanel-styles.css">
+</head>
+<body>
+    <div id="app" class="app-container">
+        <!-- Header -->
+        <header class="sidebar-header">
+            <div class="header-content">
+                <h1 class="app-title">
+                    <span class="brain-icon">🧠</span>
+                    NeuroSEDA AI
+                </h1>
+                <p class="app-subtitle">Web Assistant</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="sidebar-main">
+            <!-- Tab Navigation -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="chat">
+                    <span class="tab-icon">💬</span>
+                    Chat
+                </button>
+                <button class="tab-btn" data-tab="tools">
+                    <span class="tab-icon">🤖</span>
+                    Tools
+                </button>
+                <button class="tab-btn" data-tab="element">
+                    <span class="tab-icon">🎯</span>
+                    Element
+                </button>
+                <button class="tab-btn" data-tab="predictions">
+                    <span class="tab-icon">🔮</span>
+                    Predictions
+                </button>
+                <button class="tab-btn" data-tab="summary">
+                    <span class="tab-icon">📄</span>
+                    Summary
+                </button>
+                <button class="tab-btn" data-tab="settings">
+                    <span class="tab-icon">⚙️</span>
+                    Settings
+                </button>
+            </div>
+
+            <!-- Prediction Widget -->
+            <div id="prediction-widget" class="prediction-widget hidden">
+                <div class="prediction-header">
+                    <h3>💡 Suggested Next Actions</h3>
+                    <button id="close-predictions" class="close-btn" title="Close">&times;</button>
+                </div>
+                <div id="predictions-list" class="predictions-list">
+                    <!-- Predictions will be inserted here -->
+                </div>
+                <div id="prediction-empty" class="prediction-empty">
+                    <p>No suggestions available</p>
+                </div>
+                <div id="prediction-loading" class="prediction-loading hidden">
+                    <div class="spinner"></div>
+                    <p>Analyzing...</p>
+                </div>
+            </div>
+
+            <!-- Chat Tab -->
+            <div class="tab-content active" id="chat-tab">
+                <div class="chat-container">
+                    <div class="messages-container" id="messagesContainer">
+                        <div class="message bot-message">
+                            <div class="message-content">
+                                <p>👋 Hello! I'm your NeuroSEDA AI Assistant.</p>
+                                <p>I can help you:</p>
+                                <ul>
+                                    <li>Write emails and messages</li>
+                                    <li>Rephrase and fix grammar</li>
+                                    <li>Analyze selected elements</li>
+                                    <li>Generate content for forms</li>
+                                    <li>Explain and summarize text</li>
+                                </ul>
+                                <p><strong>Try the AI tools above or select text/elements on the page!</strong></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div class="input-area">
+                        <button id="selectElementBtn" class="select-element-btn" title="Select an element from the page">
+                            <span>🎯</span> Select Element
+                        </button>
+                        <div class="input-group">
+                            <textarea 
+                                id="userInput" 
+                                class="user-input" 
+                                placeholder="Ask me anything about the page or selected element..."
+                                rows="3"
+                            ></textarea>
+                            <button id="sendBtn" class="send-btn" title="Send message (Ctrl+Enter)">
+                                <span>📤</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Selected Element Info -->
+                    <div id="elementInfo" class="element-info hidden">
+                        <div class="element-info-header">
+                            <span>✓ Element Selected</span>
+                            <button id="clearElementBtn" class="clear-element-btn">×</button>
+                        </div>
+                        <div class="element-info-content">
+                            <!-- Image Preview -->
+                            <div id="imagePreviewContainer" class="image-preview-container hidden">
+                                <img id="imagePreview" class="image-preview" alt="Selected image">
+                                <div class="image-info">
+                                    <small id="imageDimensions"></small>
+                                </div>
+                            </div>
+                            
+                            <div class="element-detail">
+                                <strong>Tag:</strong> <code id="elementTag">-</code>
+                            </div>
+                            <div class="element-detail">
+                                <strong>Content:</strong>
+                                <div id="elementText" class="element-text">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tools Tab -->
+            <div class="tab-content" id="tools-tab">
+                <div class="tools-container">
+                    <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">🤖 AI Tools</h2>
+                    <p style="color: var(--text-secondary); font-size: 13px; margin: 0 0 16px 0;">
+                        Use these tools to write emails, fix grammar, and generate content
+                    </p>
+                    
+                    <!-- AI Tools Section -->
+                    <div class="ai-tools-section" id="aiToolsSection">
+                        <div class="tools-grid">
+                            <button id="writeEmailBtn" class="tool-btn tool-email">
+                                <span>📧</span> Write Email
+                            </button>
+                            <button id="rephraseBtn" class="tool-btn tool-rephrase">
+                                <span>✏️</span> Rephrase Text
+                            </button>
+                            <button id="fixGrammarBtn" class="tool-btn tool-grammar">
+                                <span>📝</span> Fix Grammar
+                            </button>
+                            <button id="explainBtn" class="tool-btn tool-explain">
+                                <span>💡</span> Explain
+                            </button>
+                            <button id="summarizeBtn" class="tool-btn tool-summarize">
+                                <span>📄</span> Summarize
+                            </button>
+                            <button id="generateBtn" class="tool-btn tool-generate">
+                                <span>✨</span> Generate
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tool Input Section -->
+                    <div class="tool-input-section hidden" id="toolInputSection">
+                        <h3 style="margin: 0 0 12px 0; font-size: 14px;">Enter your text or prompt:</h3>
+                        <textarea id="toolInput" placeholder="Enter your prompt or text to edit..."></textarea>
+                        <div class="tool-options">
+                            <label style="font-size: 12px; color: var(--text-secondary);">Tone:</label>
+                            <select id="toneSelect">
+                                <option value="professional">Professional</option>
+                                <option value="casual">Casual</option>
+                                <option value="formal">Formal</option>
+                                <option value="friendly">Friendly</option>
+                            </select>
+                            <div class="tool-actions">
+                                <button id="processToolBtn" class="btn btn-primary">🚀 Process</button>
+                                <button id="cancelToolBtn" class="btn btn-secondary">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tool Results -->
+                    <div id="toolResults" class="tool-results hidden">
+                        <h3 style="margin: 0 0 12px 0; font-size: 14px;">Result:</h3>
+                        <div id="toolResultsContent" style="
+                            background: var(--bg-secondary);
+                            border: 1px solid var(--border-color);
+                            border-radius: 6px;
+                            padding: 12px;
+                            min-height: 100px;
+                            max-height: 300px;
+                            overflow-y: auto;
+                            margin-bottom: 12px;
+                            font-size: 13px;
+                            line-height: 1.5;
+                        "></div>
+                        <div class="action-buttons" style="display: flex; gap: 8px;">
+                            <button id="insertToolResultBtn" class="btn btn-primary" style="flex: 1;">
+                                📝 Insert in Page
+                            </button>
+                            <button id="copyToolResultBtn" class="btn btn-secondary" style="flex: 1;">
+                                📋 Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Element Tab -->
+            <div class="tab-content" id="element-tab">
+                <div class="element-panel">
+                    <h3>Selected Element Inspector</h3>
+                    
+                    <div class="inspector-controls">
+                        <button id="inspectStartBtn" class="btn btn-primary">
+                            🎯 Start Selecting
+                        </button>
+                        <button id="inspectStopBtn" class="btn btn-secondary hidden">
+                            ✓ Stop Selecting
+                        </button>
+                    </div>
+
+                    <div id="inspectorOutput" class="inspector-output hidden">
+                        <div class="inspector-section">
+                            <h4>Element Details</h4>
+                            <div class="details-grid">
+                                <div class="detail-item">
+                                    <label>Tag Name:</label>
+                                    <code id="inspTag">-</code>
+                                </div>
+                                <div class="detail-item">
+                                    <label>ID:</label>
+                                    <code id="inspId">-</code>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Classes:</label>
+                                    <code id="inspClasses">-</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="inspector-section">
+                            <h4>Content Preview</h4>
+                            <div id="inspText" class="content-preview">-</div>
+                        </div>
+
+                        <div class="inspector-section">
+                            <h4>HTML</h4>
+                            <pre id="inspHtml" class="html-preview">-</pre>
+                        </div>
+
+                        <div class="inspector-section">
+                            <h4>Attributes</h4>
+                            <div id="inspAttrs" class="attributes-list">-</div>
+                        </div>
+
+                        <button id="copyHtmlBtn" class="btn btn-secondary full-width">
+                            📋 Copy HTML
+                        </button>
+                    </div>
+
+                    <div id="noElementMsg" class="no-element-msg">
+                        <p>No element selected yet.</p>
+                        <p>Click "Start Selecting" to choose an element from the webpage.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Tab -->
+            <div class="tab-content" id="summary-tab">
+                <div class="summary-panel">
+                    <h3>📄 Webpage Summary</h3>
+                    <p style="color: var(--text-secondary); font-size: 13px; margin: 0 0 16px 0;">
+                        Get an AI-powered summary of the current webpage.
+                    </p>
+                    
+                    <!-- Summary Controls -->
+                    <div class="summary-controls" style="margin-bottom: 16px;">
+                        <button id="generateSummaryBtn" class="btn btn-primary" style="width: 100%;">
+                            <span>✨</span> Generate Summary
+                        </button>
+                        <button id="refreshSummaryBtn" class="btn btn-secondary hidden" style="width: 100%; margin-top: 8px;">
+                            <span>🔄</span> Refresh Summary
+                        </button>
+                    </div>
+                    
+                    <!-- Summary Display -->
+                    <div id="summaryDisplay" class="summary-display hidden" style="
+                        background: var(--bg-secondary);
+                        border: 1px solid var(--border-color);
+                        border-radius: 6px;
+                        padding: 16px;
+                        min-height: 200px;
+                        max-height: 500px;
+                        overflow-y: auto;
+                    ">
+                        <div id="summaryContent" style="
+                            font-size: 13px;
+                            line-height: 1.6;
+                            color: var(--text-primary);
+                        "></div>
+                    </div>
+                    
+                    <!-- Loading State -->
+                    <div id="summaryLoading" class="summary-loading hidden" style="
+                        text-align: center;
+                        padding: 40px 20px;
+                    ">
+                        <div class="spinner" style="
+                            width: 30px;
+                            height: 30px;
+                            border: 3px solid var(--border-color);
+                            border-top: 3px solid var(--primary-color);
+                            border-radius: 50%;
+                            animation: spin 1s linear infinite;
+                            margin: 0 auto 16px;
+                        "></div>
+                        <p style="color: var(--text-secondary); margin: 0;">Analyzing webpage content...</p>
+                    </div>
+                    
+                    <!-- Error State -->
+                    <div id="summaryError" class="summary-error hidden" style="
+                        background: rgba(244, 67, 54, 0.1);
+                        border: 1px solid rgba(244, 67, 54, 0.3);
+                        border-radius: 6px;
+                        padding: 12px;
+                        color: #f44336;
+                        font-size: 13px;
+                    "></div>
+                    
+                    <!-- Page Info -->
+                    <div id="pageInfo" class="page-info hidden" style="
+                        margin-top: 16px;
+                        padding: 12px;
+                        background: var(--bg-secondary);
+                        border-radius: 6px;
+                        font-size: 12px;
+                        color: var(--text-secondary);
+                    ">
+                        <div style="margin-bottom: 4px;">
+                            <strong>Page:</strong> <span id="pageTitle">-</span>
+                        </div>
+                        <div style="margin-bottom: 4px;">
+                            <strong>URL:</strong> <span id="pageUrl" style="word-break: break-all;">-</span>
+                        </div>
+                        <div>
+                            <strong>Content Length:</strong> <span id="contentLength">-</span> characters
+                        </div>
+                    </div>
+                    
+                    <!-- Info Box -->
+                    <div class="info-box" style="
+                        background: rgba(33, 150, 243, 0.1);
+                        border: 1px solid rgba(33, 150, 243, 0.3);
+                        border-radius: 6px;
+                        padding: 12px;
+                        margin-top: 16px;
+                        font-size: 12px;
+                        line-height: 1.5;
+                        color: var(--text-secondary);
+                    ">
+                        <strong>ℹ️ How it works:</strong>
+                        <ul style="margin: 8px 0 0 0; padding-left: 16px;">
+                            <li>Extracts main content from the webpage</li>
+                            <li>Uses AI to generate a concise summary</li>
+                            <li>Highlights key points and main topics</li>
+                            <li>Works on articles, blog posts, and documentation</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Predictions Demo Tab -->
+            <div class="tab-content" id="predictions-tab">
+                <div class="predictions-panel">
+                    <h3>🔮 Element Prediction Demo</h3>
+                    <p style="color: var(--text-secondary); font-size: 13px; margin: 0 0 16px 0;">
+                        The prediction service analyzes webpage elements and suggests the next action you might take.
+                    </p>
+                    
+                    <!-- Service Status -->
+                    <div class="status-box" id="serviceStatus" style="
+                        background: rgba(244, 67, 54, 0.1);
+                        border: 1px solid rgba(244, 67, 54, 0.3);
+                        border-radius: 6px;
+                        padding: 12px;
+                        margin-bottom: 16px;
+                        font-size: 12px;
+                    ">
+                        <strong>Service Status:</strong> <span id="statusText">Checking...</span>
+                    </div>
+                    
+                    <!-- Demo Buttons -->
+                    <div class="demo-section" style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600;">Try Demo Predictions:</h4>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <button id="demoGmailBtn" class="btn btn-primary" style="width: 100%;">
+                                📧 Demo: Gmail Form
+                            </button>
+                            <button id="demoShoppingBtn" class="btn btn-primary" style="width: 100%;">
+                                🛒 Demo: Shopping Cart
+                            </button>
+                            <button id="demoSignupBtn" class="btn btn-primary" style="width: 100%;">
+                                📝 Demo: Signup Form
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Live Page Predictions -->
+                    <div class="demo-section" style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600;">Analyze Current Page:</h4>
+                        <div style="display: flex; gap: 8px;">
+                            <button id="analyzeLiveBtn" class="btn btn-secondary" style="flex: 1;">
+                                🔍 Analyze
+                            </button>
+                            <button id="clearLiveBtn" class="btn btn-secondary" style="flex: 1;">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Predictions Display -->
+                    <div class="predictions-display" id="predictionsDisplay" style="
+                        background: var(--bg-secondary);
+                        border: 1px solid var(--border-color);
+                        border-radius: 6px;
+                        padding: 12px;
+                        min-height: 200px;
+                        max-height: 400px;
+                        overflow-y: auto;
+                        display: none;
+                    ">
+                        <h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600;">🎯 Predictions:</h4>
+                        <div id="predictionsContent" style="font-size: 12px;"></div>
+                    </div>
+                    
+                    <!-- Info Box -->
+                    <div class="info-box" style="
+                        background: rgba(33, 150, 243, 0.1);
+                        border: 1px solid rgba(33, 150, 243, 0.3);
+                        border-radius: 6px;
+                        padding: 12px;
+                        margin-top: 16px;
+                        font-size: 12px;
+                        line-height: 1.5;
+                        color: var(--text-secondary);
+                    ">
+                        <strong>ℹ️ How it works:</strong>
+                        <ul style="margin: 8px 0 0 0; padding-left: 16px;">
+                            <li>The prediction service analyzes interactive elements on the page</li>
+                            <li>It suggests which element you might interact with next</li>
+                            <li>Confidence scores indicate prediction reliability</li>
+                            <li>Demo buttons show example predictions from common scenarios</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-content" id="settings-tab">
+                <div class="settings-panel">
+                    <h3>Settings</h3>
+
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            <input type="checkbox" id="autoOpenSidebar" class="setting-checkbox">
+                            Auto-open sidebar on extension click
+                        </label>
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            <input type="checkbox" id="enableNotifications" class="setting-checkbox" checked>
+                            Enable notifications
+                        </label>
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            <input type="checkbox" id="enableSound" class="setting-checkbox">
+                            Enable sound alerts
+                        </label>
+                    </div>
+
+                    <div class="setting-group">
+                        <label>Response Theme:</label>
+                        <select id="responseTheme" class="setting-select">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                            <option value="auto">Auto (system)</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-group">
+                        <label>Max Response Length:</label>
+                        <input type="number" id="maxResponseLength" class="setting-input" value="1024" min="256" max="4000">
+                    </div>
+
+                    <hr class="setting-divider">
+
+                    <div class="setting-group">
+                        <h4>About</h4>
+                        <p class="about-text">
+                            <strong>NeuroSEDA AI Assistant v1.0</strong>
+                        </p>
+                        <p class="about-text">
+                            An intelligent web assistant powered by Gemini AI. Select elements from any webpage and get instant insights, analysis, and suggestions.
+                        </p>
+                        <p class="about-text version-text">
+                            Made with <span class="heart">❤️</span> for better productivity
+                        </p>
+                    </div>
+
+                    <button id="clearHistoryBtn" class="btn btn-secondary full-width" style="margin-top: 16px;">
+                        🗑️ Clear Chat History
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="sidebar-footer">
+            <p class="footer-text">Powered by Gemini AI</p>
+        </footer>
+
+        <!-- Loading Indicator -->
+        <div id="loadingSpinner" class="loading-spinner hidden">
+            <div class="spinner"></div>
+            <p>Thinking...</p>
+        </div>
+    </div>
+
+    <script src="sidepanel.js"></script>
+    <script src="prediction-handler.js"></script>
+</body>
+</html>
