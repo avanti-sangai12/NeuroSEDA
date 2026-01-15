@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NeuroSEDA Extension Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+        .test-section {
+            background: #334155;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #475569;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #065f46; color: #d1fae5; }
+        .error { background: #7f1d1d; color: #fecaca; }
+        .warning { background: #92400e; color: #fed7aa; }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #2563eb; }
+        .log {
+            background: #1e293b;
+            border: 1px solid #475569;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            color: #cbd5e1;
+        }
+        .data-display {
+            background: #1e293b;
+            border: 1px solid #475569;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧠 NeuroSEDA Extension Integration Test</h1>
+    
+    <div class="test-section">
+        <h2>Extension Connection</h2>
+        <div id="connectionStatus" class="status warning">Checking connection...</div>
+        <button onclick="checkConnection()">Check Connection</button>
+        <button onclick="refreshConnection()">Refresh Connection</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Data Retrieval Tests</h2>
+        <button onclick="testBehavioralData()">Get Behavioral Data</button>
+        <button onclick="testHistoryInsights()">Get History Insights</button>
+        <button onclick="testSearchPatterns()">Get Search Patterns</button>
+        <button onclick="testPopupData()">Get Popup Data</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Data Display</h2>
+        <div id="dataDisplay" class="data-display">No data retrieved yet...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Log</h2>
+        <div id="consoleLog" class="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <!-- Include the integration script -->
+    <script src="neuroSEDA-integration.js"></script>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('consoleLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logEntry.style.color = type === 'error' ? '#f87171' : type === 'success' ? '#34d399' : '#9ca3af';
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (window.neuroSEDAExtension.isConnected()) {
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '✅ Extension Connected';
+            } else {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = '❌ Extension Not Connected';
+            }
+        }
+
+        function checkConnection() {
+            log('Checking extension connection...');
+            updateConnectionStatus();
+            log(`Connection status: ${window.neuroSEDAExtension.isConnected() ? 'Connected' : 'Not Connected'}`);
+        }
+
+        function refreshConnection() {
+            log('Refreshing extension connection...');
+            window.neuroSEDAExtension.checkExtensionAvailability().then(() => {
+                updateConnectionStatus();
+                log('Connection refresh completed');
+            });
+        }
+
+        function displayData(data, title) {
+            const displayDiv = document.getElementById('dataDisplay');
+            displayDiv.innerHTML = `=== ${title} ===\n${JSON.stringify(data, null, 2)}`;
+        }
+
+        async function testBehavioralData() {
+            log('Testing behavioral data retrieval...');
+            try {
+                const data = await window.neuroSEDAExtension.getBehavioralData(1); // Last hour
+                if (data) {
+                    displayData(data, 'Behavioral Data (Last Hour)');
+                    log('✅ Behavioral data retrieved successfully', 'success');
+                } else {
+                    log('❌ Failed to retrieve behavioral data', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testHistoryInsights() {
+            log('Testing history insights retrieval...');
+            try {
+                const data = await window.neuroSEDAExtension.getHistoryInsights(24); // Last 24 hours
+                if (data) {
+                    displayData(data, 'History Insights (Last 24 Hours)');
+                    log('✅ History insights retrieved successfully', 'success');
+                } else {
+                    log('❌ Failed to retrieve history insights', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSearchPatterns() {
+            log('Testing search patterns retrieval...');
+            try {
+                const data = await window.neuroSEDAExtension.getSearchPatterns(7); // Last 7 days
+                if (data) {
+                    displayData(data, 'Search Patterns (Last 7 Days)');
+                    log('✅ Search patterns retrieved successfully', 'success');
+                } else {
+                    log('❌ Failed to retrieve search patterns', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testPopupData() {
+            log('Testing popup data retrieval...');
+            try {
+                const data = await window.neuroSEDAExtension.getPopupData();
+                if (data) {
+                    displayData(data, 'Popup Data');
+                    log('✅ Popup data retrieved successfully', 'success');
+                } else {
+                    log('❌ Failed to retrieve popup data', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('consoleLog').innerHTML = '';
+        }
+
+        // Auto-check connection on page load
+        window.addEventListener('load', function() {
+            log('Page loaded, checking extension connection...');
+            setTimeout(() => {
+                checkConnection();
+            }, 1000);
+        });
+
+        // Monitor connection status changes
+        setInterval(() => {
+            updateConnectionStatus();
+        }, 5000);
+    </script>
+</body>
+</html>

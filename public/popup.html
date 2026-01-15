@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>NeuroSEDA</title>
+  <style>
+    body {
+      width: 300px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1e293b;
+      color: #e2e8f0;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #334155;
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .metric-label {
+      color: #94a3b8;
+    }
+    .metric-value {
+      color: #e2e8f0;
+      font-weight: 500;
+    }
+    .footer {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #334155;
+      font-size: 12px;
+      color: #64748b;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2 style="margin: 0; color: #60a5fa;">🧠 NeuroSEDA</h2>
+    <p style="margin: 4px 0 0 0; font-size: 12px; color: #94a3b8;">Behavioral Intelligence</p>
+  </div>
+
+  <div class="status">
+    <div class="status-indicator" id="statusIndicator"></div>
+    <span id="statusText">Extension Active</span>
+  </div>
+
+  <div class="metric">
+    <span class="metric-label">Pages Monitored:</span>
+    <span class="metric-value" id="pageCount">-</span>
+  </div>
+
+  <div class="metric">
+    <span class="metric-label">Data Collected:</span>
+    <span class="metric-value" id="dataPoints">-</span>
+  </div>
+
+  <div class="metric">
+    <span class="metric-label">Last Update:</span>
+    <span class="metric-value" id="lastUpdate">-</span>
+  </div>
+
+  <div class="footer">
+    Click to open NeuroSEDA dashboard
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "NeuroSEDA - Behavioral Intelligence",
+  "version": "1.0.0",
+  "description": "Advanced behavioral analysis and action prediction using Chrome browsing data",
+  "permissions": [
+    "history",
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "exclude_matches": [
+        "http://localhost:3000/*",
+        "https://localhost:3000/*",
+        "http://127.0.0.1:3000/*",
+        "https://127.0.0.1:3000/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "NeuroSEDA"
+  }
+}
