@@ -6,13 +6,40 @@ let GEMINI_API_KEY = null;
 console.log('[NeuroSEDA] Background service worker initialized');
 console.log('[NeuroSEDA] Prediction service available at:', PREDICTION_SERVICE_URL);
 
-// Load API key from Chrome storage on startup
-chrome.storage.sync.get(['GEMINI_API_KEY'], (result) => {
-  if (result.GEMINI_API_KEY) {
-    GEMINI_API_KEY = result.GEMINI_API_KEY;
-    console.log('[NeuroSEDA] API key loaded from storage');
-  } else {
-    console.warn('[NeuroSEDA] No API key found in storage. Please set it in extension options.');
+// Load API key from Chrome storage
+function loadApiKey() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(['GEMINI_API_KEY'], (result) => {
+      if (chrome.runtime.lastError) {
+        console.error('[NeuroSEDA] Error loading API key:', chrome.runtime.lastError);
+        GEMINI_API_KEY = null;
+        resolve();
+        return;
+      }
+      
+      if (result.GEMINI_API_KEY && result.GEMINI_API_KEY.trim().length > 0) {
+        GEMINI_API_KEY = result.GEMINI_API_KEY.trim();
+        console.log('[NeuroSEDA] API key loaded from storage (length:', GEMINI_API_KEY.length, ')');
+      } else {
+        GEMINI_API_KEY = null;
+        console.warn('[NeuroSEDA] No API key found in storage. Please set it in extension options.');
+        console.log('[NeuroSEDA] Storage result:', result);
+      }
+      resolve();
+    });
+  });
+}
+
+// Load API key on startup
+loadApiKey().then(() => {
+  console.log('[NeuroSEDA] Initial API key load complete');
+});
+
+// Listen for storage changes to reload API key when settings are updated
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'sync' && changes.GEMINI_API_KEY) {
+    console.log('[NeuroSEDA] API key updated, reloading...');
+    loadApiKey();
   }
 });
 
@@ -126,7 +153,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ success: true });
   } 
   else if (request.type === 'GEMINI_REQUEST') {
-    handleGeminiRequest(request.prompt, request.elementContent, request.pageContext)
+    // Reload API key before processing (in case it was just updated)
+    loadApiKey()
+      .then(() => {
+        // Double-check API key is loaded
+        if (!GEMINI_API_KEY) {
+          throw new Error('API key not configured. Please set your Gemini API key in extension options. Right-click the extension icon → Options → Enter your API key → Save.');
+        }
+        return handleGeminiRequest(request.prompt, request.elementContent, request.pageContext);
+      })
       .then(response => {
         console.log('[NeuroSEDA] Gemini response sent successfully');
         sendResponse({ success: true, data: response });
@@ -195,7 +230,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   else if (request.type === 'GENERATE_CONTENT') {
     console.log('[NeuroSEDA] Generating content:', request.contentType);
-    generateContent(request.prompt, request.contentType, request.context)
+    // Reload API key before processing (in case it was just updated)
+    loadApiKey()
+      .then(() => {
+        // Double-check API key is loaded
+        if (!GEMINI_API_KEY) {
+          throw new Error('API key not configured. Please set your Gemini API key in extension options. Right-click the extension icon → Options → Enter your API key → Save.');
+        }
+        return generateContent(request.prompt, request.contentType, request.context);
+      })
       .then(response => {
         console.log('[NeuroSEDA] Content generated successfully');
         sendResponse({ success: true, data: response });
@@ -208,7 +251,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   else if (request.type === 'REPHRASE_TEXT') {
     console.log('[NeuroSEDA] Rephrasing text');
-    rephraseText(request.text, request.action, request.context)
+    // Reload API key before processing (in case it was just updated)
+    loadApiKey()
+      .then(() => {
+        // Double-check API key is loaded
+        if (!GEMINI_API_KEY) {
+          throw new Error('API key not configured. Please set your Gemini API key in extension options. Right-click the extension icon → Options → Enter your API key → Save.');
+        }
+        return rephraseText(request.text, request.action, request.context);
+      })
       .then(response => {
         console.log('[NeuroSEDA] Text rephrased successfully');
         try {
@@ -226,6 +277,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       });
     return true;
+  }
+  else if (request.type === 'SUMMARIZE_PAGE') {
+    console.log('[NeuroSEDA] Summarizing page');
+    // Reload API key before processing (in case it was just updated)
+    loadApiKey()
+      .then(() => {
+        // Double-check API key is loaded
+        if (!GEMINI_API_KEY) {
+          throw new Error('API key not configured. Please set your Gemini API key in extension options. Right-click the extension icon → Options → Enter your API key → Save.');
+        }
+        return handlePageSummarization(request.pageContent);
+      })
+      .then(response => {
+        console.log('[NeuroSEDA] Summary generated successfully');
+        sendResponse({ success: true, data: response });
+      })
+      .catch(error => {
+        console.error('[NeuroSEDA] Summarization error:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Keep channel open for async response
+  }
+  else if (request.type === 'SETTINGS_UPDATED') {
+    console.log('[NeuroSEDA] Settings updated, reloading API key...');
+    loadApiKey().then(() => {
+      sendResponse({ success: true });
+    });
+    return true; // Keep channel open for async response
   }
   else {
     console.warn('[NeuroSEDA] Unknown message type:', request.type);
@@ -402,10 +481,34 @@ Please provide a helpful, concise response. If the user is asking about the sele
       body: JSON.stringify(payload)
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || `HTTP ${response.status}: Gemini API error`);
-    }
+      if (!response.ok) {
+        const error = await response.json();
+        const errorMessage = error.error?.message || `HTTP ${response.status}: Gemini API error`;
+        
+        // Check for invalid API key errors
+        if (errorMessage.includes('API key not valid') || 
+            errorMessage.includes('invalid API key') ||
+            errorMessage.includes('Invalid API key') ||
+            errorMessage.includes('API_KEY_INVALID') ||
+            (response.status === 401 && errorMessage.includes('key'))) {
+          const invalidKeyError = new Error('API key is invalid. Please check your API key in extension options and make sure it\'s correct.');
+          invalidKeyError.name = 'InvalidApiKeyError';
+          throw invalidKeyError;
+        }
+        
+        // Check for quota errors and extract retry time
+        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
+          const retryMatch = errorMessage.match(/Please retry in ([\d.]+)s/);
+          const retrySeconds = retryMatch ? parseFloat(retryMatch[1]) : null;
+          
+          const quotaError = new Error(errorMessage);
+          quotaError.name = 'QuotaExceededError';
+          quotaError.retryAfter = retrySeconds;
+          throw quotaError;
+        }
+        
+        throw new Error(errorMessage);
+      }
 
     const data = await response.json();
     const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from AI';
@@ -565,6 +668,122 @@ async function callGeminiAPI(prompt) {
     url: 'Generated content',
     title: 'AI Assistant'
   });
+}
+
+// Summarize webpage content
+async function handlePageSummarization(pageContent) {
+  try {
+    const summaryPrompt = `
+You are an AI assistant that creates concise, informative summaries of web pages.
+
+Page Information:
+- Title: ${pageContent.title || 'Untitled'}
+- URL: ${pageContent.url || 'Unknown'}
+
+Page Content:
+${pageContent.content ? pageContent.content.substring(0, 8000) : 'No content available'}
+
+Please provide a comprehensive summary of this webpage that includes:
+1. Main topic and purpose
+2. Key points and important information
+3. Main sections or topics covered
+4. Any notable details or insights
+
+Format the summary in a clear, readable way with proper paragraphs and bullet points where appropriate. Keep it concise but informative (aim for 200-400 words).
+    `;
+
+    const payload = {
+      contents: [
+        {
+          parts: [
+            {
+              text: summaryPrompt
+            }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.3, // Lower temperature for more focused summaries
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1024
+      }
+    };
+
+    // Verify API key is available
+    if (!GEMINI_API_KEY) {
+      throw new Error('API key not configured. Please set your Gemini API key in extension options.');
+    }
+
+    console.log('[NeuroSEDA] Calling Gemini API for page summarization...');
+    
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    try {
+      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json();
+        const errorMessage = error.error?.message || `HTTP ${response.status}: Gemini API error`;
+        
+        // Check for invalid API key errors
+        if (errorMessage.includes('API key not valid') || 
+            errorMessage.includes('invalid API key') ||
+            errorMessage.includes('Invalid API key') ||
+            errorMessage.includes('API_KEY_INVALID') ||
+            (response.status === 401 && errorMessage.includes('key'))) {
+          const invalidKeyError = new Error('API key is invalid. Please check your API key in extension options and make sure it\'s correct.');
+          invalidKeyError.name = 'InvalidApiKeyError';
+          throw invalidKeyError;
+        }
+        
+        // Check for quota errors and extract retry time
+        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
+          const retryMatch = errorMessage.match(/Please retry in ([\d.]+)s/);
+          const retrySeconds = retryMatch ? parseFloat(retryMatch[1]) : null;
+          
+          const quotaError = new Error(errorMessage);
+          quotaError.name = 'QuotaExceededError';
+          quotaError.retryAfter = retrySeconds;
+          throw quotaError;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      const summary = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No summary generated';
+      
+      console.log('[NeuroSEDA] Page summary generated successfully');
+      
+      return {
+        summary: summary,
+        timestamp: new Date().toISOString(),
+        pageTitle: pageContent.title,
+        pageUrl: pageContent.url
+      };
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Summary generation timed out. The API took too long to respond. Please try again.');
+      }
+      throw fetchError;
+    }
+  } catch (error) {
+    console.error('[NeuroSEDA] Summarization API error:', error);
+    throw error;
+  }
 }
 
 console.log('[NeuroSEDA] Background service worker ready');

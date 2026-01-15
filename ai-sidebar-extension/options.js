@@ -100,9 +100,23 @@ function validateApiKey() {
     return false;
   }
   
+  // Gemini API keys typically start with "AIza" and are 39 characters long
+  // But we'll be lenient and just check minimum length
   if (apiKey.length < 20) {
-    showStatus('⚠️ API key seems too short', 'warning');
+    showStatus('⚠️ API key seems too short. Gemini API keys are usually 39 characters.', 'warning');
     return false;
+  }
+  
+  // Check for common invalid patterns
+  if (apiKey.includes('your-api-key') || apiKey.includes('YOUR_API_KEY') || apiKey === 'sk-') {
+    showStatus('⚠️ Please enter your actual API key, not a placeholder', 'warning');
+    return false;
+  }
+  
+  // Gemini API keys typically start with "AIza"
+  if (!apiKey.startsWith('AIza') && apiKey.length < 30) {
+    showStatus('⚠️ Warning: Gemini API keys usually start with "AIza". Make sure you copied the entire key.', 'warning');
+    // Don't return false, just warn - some keys might be different format
   }
   
   return true;

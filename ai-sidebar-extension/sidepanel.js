@@ -786,6 +786,18 @@ async function loadPageInfo() {
       return;
     }
     
+    // Try to inject content script if needed
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content.js']
+      });
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch (injectError) {
+      // Script might already be loaded, continue
+      console.log('[NeuroSEDA] Content script injection (loadPageInfo):', injectError.message);
+    }
+    
     // Get page content to show info
     try {
       const pageContentResponse = await chrome.tabs.sendMessage(tab.id, {
@@ -802,6 +814,7 @@ async function loadPageInfo() {
       }
     } catch (error) {
       // If content script not available, just show tab info
+      console.log('[NeuroSEDA] Could not get page content (loadPageInfo):', error.message);
       if (pageTitle) pageTitle.textContent = tab.title || 'Untitled';
       if (pageUrl) pageUrl.textContent = tab.url;
       if (contentLength) contentLength.textContent = 'N/A';
@@ -1201,6 +1214,8 @@ function clearPredictions() {
 async function generateWebpageSummary() {
   if (!generateSummaryBtn || !summaryDisplay || !summaryContent) return;
   
+  const startTime = Date.now();
+  
   try {
     // Show loading state
     summaryLoading.classList.remove('hidden');
@@ -1208,6 +1223,9 @@ async function generateWebpageSummary() {
     summaryError.classList.add('hidden');
     generateSummaryBtn.disabled = true;
     generateSummaryBtn.style.opacity = '0.6';
+    
+    // Update loading message
+    updateLoadingMessage('Preparing to analyze page...');
     
     // Get current tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -1220,14 +1238,73 @@ async function generateWebpageSummary() {
       throw new Error('Cannot summarize Chrome special pages. Please open a regular webpage.');
     }
     
-    console.log('[NeuroSEDA] Generating summary for:', tab.url);
+    // Check if URL is valid for content scripts
+    if (!tab.url.startsWith('http://') && !tab.url.startsWith('https://')) {
+      throw new Error('Cannot summarize this page type. Please open a regular webpage (http:// or https://).');
+    }
     
-    // Get page content from content script
-    const pageContentResponse = await chrome.tabs.sendMessage(tab.id, {
-      type: 'GET_PAGE_CONTENT'
-    });
+    console.log('[NeuroSEDA] Generating summary for:', tab.url);
+    updateLoadingMessage('Extracting page content...');
+    
+    // Try to inject content script if not already loaded
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content.js']
+      });
+      console.log('[NeuroSEDA] Content script injected');
+      // Wait a bit for script to initialize
+      await new Promise(resolve => setTimeout(resolve, 300));
+    } catch (injectError) {
+      console.log('[NeuroSEDA] Content script injection attempt:', injectError.message);
+      // Continue anyway - script might already be loaded or URL might not support injection
+    }
+    
+    // Get page content from content script with retry logic
+    let pageContentResponse = null;
+    let retries = 3;
+    let lastError = null;
+    
+    while (retries > 0 && !pageContentResponse) {
+      try {
+        pageContentResponse = await chrome.tabs.sendMessage(tab.id, {
+          type: 'GET_PAGE_CONTENT'
+        });
+        
+        if (pageContentResponse && pageContentResponse.success) {
+          break;
+        }
+      } catch (error) {
+        lastError = error;
+        console.log(`[NeuroSEDA] Message send failed, retries left: ${retries - 1}`, error);
+        
+        if (error.message && error.message.includes('Receiving end does not exist')) {
+          // Try injecting script again
+          try {
+            await chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              files: ['content.js']
+            });
+            await new Promise(resolve => setTimeout(resolve, 300));
+          } catch (injectErr) {
+            console.log('[NeuroSEDA] Script injection retry failed:', injectErr);
+          }
+        }
+        
+        retries--;
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+    }
     
     if (!pageContentResponse || !pageContentResponse.success) {
+      if (lastError) {
+        if (lastError.message.includes('Receiving end does not exist')) {
+          throw new Error('Content script not available. Please refresh the page and try again, or make sure you\'re on a regular webpage (not a Chrome internal page).');
+        }
+        throw new Error(`Could not connect to page: ${lastError.message}`);
+      }
       throw new Error('Could not extract page content. Make sure the page is fully loaded.');
     }
     
@@ -1247,16 +1324,35 @@ async function generateWebpageSummary() {
     }
     
     console.log('[NeuroSEDA] Page content extracted:', pageContent.length, 'characters');
+    const extractionTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    updateLoadingMessage(`Content extracted (${extractionTime}s). Generating AI summary...`);
     
-    // Send to background script for summarization
-    const summaryResponse = await chrome.runtime.sendMessage({
+    // Send to background script for summarization with timeout
+    const summaryPromise = chrome.runtime.sendMessage({
       type: 'SUMMARIZE_PAGE',
       pageContent: pageContent
     });
     
+    // Add timeout (30 seconds for API call)
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Summary generation timed out after 30 seconds. Please try again.')), 30000);
+    });
+    
+    const summaryResponse = await Promise.race([summaryPromise, timeoutPromise]);
+    
     if (!summaryResponse || !summaryResponse.success) {
-      throw new Error(summaryResponse?.error || 'Failed to generate summary');
+      const errorMsg = summaryResponse?.error || 'Failed to generate summary';
+      
+      // If it's an API key error, provide helpful message
+      if (errorMsg.includes('API key not configured')) {
+        throw new Error('API key not configured. Click "Open Settings" below to set your Gemini API key.');
+      }
+      
+      throw new Error(errorMsg);
     }
+    
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[NeuroSEDA] Summary generated in ${totalTime} seconds`);
     
     const summary = summaryResponse.data.summary;
     currentSummary = summary;
@@ -1275,12 +1371,89 @@ async function generateWebpageSummary() {
     
   } catch (error) {
     console.error('[NeuroSEDA] Error generating summary:', error);
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
     
     // Show error
     summaryLoading.classList.add('hidden');
     summaryDisplay.classList.add('hidden');
     summaryError.classList.remove('hidden');
-    summaryError.textContent = `❌ Error: ${error.message}`;
+    
+    // Create error message with action button if it's an API key error
+    if (error.message.includes('API key not configured') || 
+        error.message.includes('Open Settings') ||
+        error.message.includes('API key is invalid') ||
+        error.message.includes('invalid API key')) {
+      const errorDiv = document.createElement('div');
+      errorDiv.innerHTML = `
+        <div style="margin-bottom: 12px;">
+          <strong>❌ ${error.message.includes('invalid') ? 'Invalid API Key' : 'API Key Error'}</strong>
+        </div>
+        <div style="margin-bottom: 12px; font-size: 13px; line-height: 1.5;">
+          ${error.message.includes('invalid') 
+            ? 'Your API key appears to be invalid or expired. Please verify it\'s correct.'
+            : error.message}
+        </div>
+        <button id="openSettingsBtn" style="
+          background: var(--primary-color);
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          width: 100%;
+          margin-bottom: 8px;
+        ">⚙️ Open Settings</button>
+        <div style="font-size: 12px; color: var(--text-secondary);">
+          <strong>How to fix:</strong>
+          <ol style="margin: 8px 0; padding-left: 20px; text-align: left;">
+            <li>Get a valid API key from <a href="https://aistudio.google.com" target="_blank" style="color: var(--primary-color);">Google AI Studio</a></li>
+            <li>Make sure you copy the entire key (usually starts with "AIza...")</li>
+            <li>Paste it in Settings → Gemini API Key</li>
+            <li>Click "Save Settings"</li>
+          </ol>
+        </div>
+      `;
+      summaryError.innerHTML = '';
+      summaryError.appendChild(errorDiv);
+      
+      // Add click handler for settings button
+      document.getElementById('openSettingsBtn').addEventListener('click', () => {
+        chrome.runtime.openOptionsPage();
+      });
+    } 
+    // Handle quota errors with helpful information
+    else if (error.message.includes('quota') || error.message.includes('Quota exceeded')) {
+      const retryMatch = error.message.match(/Please retry in ([\d.]+)s/);
+      const retrySeconds = retryMatch ? parseFloat(retryMatch[1]) : null;
+      const retryMinutes = retrySeconds ? Math.ceil(retrySeconds / 60) : null;
+      
+      const errorDiv = document.createElement('div');
+      errorDiv.innerHTML = `
+        <div style="margin-bottom: 12px;">
+          <strong>⚠️ API Quota Exceeded</strong>
+        </div>
+        <div style="margin-bottom: 12px; font-size: 13px; line-height: 1.5;">
+          ${retrySeconds ? `You've reached the free tier limit. Please wait ${retryMinutes ? `about ${retryMinutes} minute${retryMinutes > 1 ? 's' : ''}` : `${Math.ceil(retrySeconds)} seconds`} before trying again.` : 'You\'ve reached the free tier quota limit for Gemini API.'}
+        </div>
+        <div style="margin-bottom: 12px; font-size: 12px; color: var(--text-secondary);">
+          <strong>Options:</strong>
+          <ul style="margin: 8px 0; padding-left: 20px;">
+            <li>Wait for the quota to reset (usually daily)</li>
+            <li>Upgrade to a paid plan for higher limits</li>
+            <li>Check your usage at <a href="https://ai.dev/rate-limit" target="_blank" style="color: var(--primary-color);">ai.dev/rate-limit</a></li>
+          </ul>
+        </div>
+        ${retrySeconds ? `<div style="font-size: 11px; color: var(--text-secondary);">
+          Retry after: ${Math.ceil(retrySeconds)} seconds
+        </div>` : ''}
+      `;
+      summaryError.innerHTML = '';
+      summaryError.appendChild(errorDiv);
+    } 
+    else {
+      summaryError.textContent = `❌ Error: ${error.message}`;
+    }
     
   } finally {
     // Re-enable button
@@ -1288,6 +1461,14 @@ async function generateWebpageSummary() {
       generateSummaryBtn.disabled = false;
       generateSummaryBtn.style.opacity = '1';
     }
+  }
+}
+
+// Update loading message
+function updateLoadingMessage(message) {
+  const loadingText = summaryLoading.querySelector('p');
+  if (loadingText) {
+    loadingText.textContent = message;
   }
 }
 
