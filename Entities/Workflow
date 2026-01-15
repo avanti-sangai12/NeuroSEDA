@@ -1,0 +1,83 @@
+{
+  "name": "Workflow",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Workflow name"
+    },
+    "description": {
+      "type": "string",
+      "description": "What this workflow does"
+    },
+    "trigger_pattern": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Behavioral pattern that triggers this workflow"
+    },
+    "confidence_threshold": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "default": 0.8,
+      "description": "Minimum confidence to trigger workflow"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "open_app",
+              "send_message",
+              "create_document",
+              "run_script",
+              "navigate_url"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "description": "What to open/execute"
+          },
+          "parameters": {
+            "type": "object",
+            "description": "Additional parameters for the action"
+          }
+        }
+      },
+      "description": "Actions to execute when workflow triggers"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this workflow is currently active"
+    },
+    "times_triggered": {
+      "type": "number",
+      "default": 0,
+      "description": "How many times this workflow has been triggered"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "productivity",
+        "communication",
+        "development",
+        "research",
+        "creative",
+        "custom"
+      ],
+      "default": "custom",
+      "description": "Workflow category"
+    }
+  },
+  "required": [
+    "name",
+    "trigger_pattern",
+    "actions"
+  ]
+}

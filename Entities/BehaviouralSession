@@ -1,0 +1,56 @@
+{
+  "name": "BehavioralSession",
+  "type": "object",
+  "properties": {
+    "session_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the behavioral tracking session started"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "description": "Length of session in seconds"
+    },
+    "mouse_movements": {
+      "type": "number",
+      "description": "Total mouse movements detected"
+    },
+    "keystroke_count": {
+      "type": "number",
+      "description": "Total keystrokes captured"
+    },
+    "scroll_events": {
+      "type": "number",
+      "description": "Number of scroll events"
+    },
+    "window_switches": {
+      "type": "number",
+      "description": "Number of window/app switches"
+    },
+    "behavioral_intent_vector": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Normalized behavioral intent vector"
+    },
+    "predicted_action": {
+      "type": "string",
+      "description": "AI predicted next action"
+    },
+    "confidence_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Prediction confidence (0-1)"
+    },
+    "workflow_triggered": {
+      "type": "string",
+      "description": "Name of workflow that was triggered, if any"
+    }
+  },
+  "required": [
+    "session_start",
+    "duration_seconds"
+  ]
+}
